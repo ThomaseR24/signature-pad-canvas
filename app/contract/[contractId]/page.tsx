@@ -61,6 +61,9 @@ export default async function ContractDetailsPage({
   params: { contractId: string } 
 }) {
   const contract = await getContract(params.contractId);
+  
+  // Debug-Ausgabe hinzufügen
+  console.log('Contract Data:', JSON.stringify(contract, null, 2));
 
   if (!contract) {
     return <div className="min-h-screen bg-background p-8">Vertrag nicht gefunden</div>;
@@ -139,7 +142,7 @@ export default async function ContractDetailsPage({
                   <div className="mt-4 pt-4 border-t">
                     <p className="text-sm font-medium text-green-800">Signiert am:</p>
                     <p className="text-sm text-gray-600">
-                      {new Date(contract.parties[0].signedAt).toLocaleString('de-DE')}
+                      {new Date(contract.parties[0].signatureTimestamp).toLocaleString('de-DE')}
                     </p>
                   </div>
                 )}
@@ -169,7 +172,7 @@ export default async function ContractDetailsPage({
                   <div className="mt-4 pt-4 border-t">
                     <p className="text-sm font-medium text-green-800">Signiert am:</p>
                     <p className="text-sm text-gray-600">
-                      {new Date(contract.parties[1].signedAt).toLocaleString('de-DE')}
+                      {new Date(contract.parties[1].signatureTimestamp).toLocaleString('de-DE')}
                     </p>
                   </div>
                 )}
