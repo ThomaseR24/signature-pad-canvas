@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Contract, Party } from '@/app/types/contract';
+import { Contract } from '@/app/types/contract';
 
 interface SignatureClientProps {
   contract: Contract;
@@ -14,7 +14,7 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
   const [isSigningInProgress, setIsSigningInProgress] = useState(false);
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
-  const [signatures, setSignatures] = useState<{[key: number]: {
+  const [signatures, setSignatures] = useState<{[key: string]: {
     name: string;
     image: string | null;
   }}>({});
@@ -37,33 +37,36 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
     return null;
   };
 
-  // Unterschriften für alle Parteien generieren
-  const updateSignatures = async (sigs: typeof signatures) => {
-    const updated = {...sigs};
-    for (const [index, sig] of Object.entries(updated)) {
-      const image = await generateSignature(sig.name);
-      updated[Number(index)].image = image;
-    }
-    setSignatures(updated);
-  };
-
   // Initial Namen setzen
   useEffect(() => {
-    const initialSigs: {[key: number]: {name: string; image: string | null}} = {};
-    contract.parties.forEach((party: Party, index: number) => {
-      initialSigs[index] = {
-        name: party.representative.name,
+    const initialSigs = {
+      initiator: {
+        name: contract.initiator.representative.name,
         image: null
-      };
-    });
+      },
+      recipient: {
+        name: contract.recipient.representative.name,
+        image: null
+      }
+    };
     setSignatures(initialSigs);
     updateSignatures(initialSigs);
   }, [contract]);
 
-  const handleNameChange = async (partyIndex: number, newName: string) => {
+  // Unterschriften generieren
+  const updateSignatures = async (sigs: typeof signatures) => {
+    const updated = {...sigs};
+    for (const [key, sig] of Object.entries(updated)) {
+      const image = await generateSignature(sig.name);
+      updated[key].image = image;
+    }
+    setSignatures(updated);
+  };
+
+  const handleNameChange = async (party: 'initiator' | 'recipient', newName: string) => {
     const updated = {
       ...signatures,
-      [partyIndex]: {
+      [party]: {
         name: newName,
         image: null
       }
@@ -72,25 +75,22 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
     updateSignatures(updated);
   };
 
-  // Signatur-Prozess
-  const handleSignature = async (partyIndex: number) => {
+  const handleSignature = async (party: 'initiator' | 'recipient') => {
     try {
       setIsSigningInProgress(true);
-      const currentName = signatures[partyIndex].name;
+      const currentName = signatures[party].name;
       
-      // Unterschrift mit dem bearbeiteten Namen generieren
       const signatureImg = await generateSignature(currentName);
       setSignatureImage(signatureImg);
 
-      // API-Call zum Speichern der Signatur
       const response = await fetch('/api/signature', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contractId: contract.contractId,
-          party: partyIndex === 0 ? 'initiator' : 'partner',
+          contractId: contract.id,
+          party,
           timestamp: new Date().toISOString(),
           signatureImage: signatureImg,
           name: currentName
@@ -110,41 +110,37 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
     }
   };
 
-  // Erfolgs-Overlay bestätigen und zur Übersicht navigieren
   const handleSuccessConfirm = () => {
     router.push('/');
   };
 
-  // Bestimmen, welcher Button angezeigt werden soll
-  const renderSignatureButton = (partyIndex: number) => {
-    const party = contract.parties[partyIndex];
-    const currentSignature = signatures[partyIndex] || { 
-      name: party.representative.name,
+  const renderSignatureButton = (party: 'initiator' | 'recipient') => {
+    const partyData = party === 'initiator' ? contract.initiator : contract.recipient;
+    const currentSignature = signatures[party] || { 
+      name: partyData.representative.name,
       image: null
     };
     
-    if (party.signature) {
+    if (partyData.signature) {
       return (
         <div className="p-4 bg-green-50 rounded-lg">
-          <p className="text-green-800">Signiert von {party.representative.name}</p>
+          <p className="text-green-800">Signiert von {partyData.representative.name}</p>
         </div>
       );
     }
 
     return (
       <div className="space-y-4">
-        {/* Name Input */}
         <div className="space-y-2">
           <label className="block text-sm text-gray-600">Name für die Unterschrift:</label>
           <input
             type="text"
             value={currentSignature.name}
-            onChange={(e) => handleNameChange(partyIndex, e.target.value)}
+            onChange={(e) => handleNameChange(party, e.target.value)}
             className="w-full p-2 border rounded-lg bg-white text-gray-700"
           />
         </div>
 
-        {/* Vorschau der Unterschrift */}
         <div className="p-4 bg-gray-50 border rounded-lg">
           <p className="text-sm text-gray-600 mb-2">Ihre Unterschrift wird so aussehen:</p>
           <div className="h-[100px] flex items-center justify-center border-b border-gray-300">
@@ -160,9 +156,8 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
           </div>
         </div>
         
-        {/* Signatur Button */}
         <button
-          onClick={() => handleSignature(partyIndex)}
+          onClick={() => handleSignature(party)}
           disabled={isSigningInProgress || !currentSignature.name.trim()}
           className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
         >
@@ -183,35 +178,18 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
 
   return (
     <div className="space-y-8">
-      {/* Vorschau der generierten Unterschrift */}
-      {signatureImage && (
-        <div className="mt-4 p-4 border rounded-lg">
-          <p className="text-sm text-gray-600 mb-2">Generierte Unterschrift:</p>
-          <Image 
-            src={signatureImage} 
-            alt="Generierte Unterschrift" 
-            width={200} 
-            height={100}
-            className="border border-gray-300 rounded"
-          />
-        </div>
-      )}
-
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Initiator Signatur */}
         <div className="space-y-2">
           <h3 className="text-lg font-medium">Initiator Signatur</h3>
-          {renderSignatureButton(0)}
+          {renderSignatureButton('initiator')}
         </div>
 
-        {/* Partner Signatur */}
         <div className="space-y-2">
           <h3 className="text-lg font-medium">Partner Signatur</h3>
-          {renderSignatureButton(1)}
+          {renderSignatureButton('recipient')}
         </div>
       </div>
 
-      {/* Erfolgs-Overlay */}
       {showSuccessOverlay && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4">

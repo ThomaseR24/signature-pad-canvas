@@ -2,12 +2,94 @@
 'use client';
 
 import { useState } from 'react';
-import { useDropzone } from 'react-dropzone';
 import { useRouter } from 'next/navigation';
+import { useDropzone } from 'react-dropzone';
 import UploadSuccessOverlay from '../components/UploadSuccessOverlay';
 import ErrorOverlay from '../components/ErrorOverlay';
 import DocumentValidation from '../components/DocumentValidation';
 import LegalConfirmation from '../components/LegalConfirmation';
+import { put } from '@vercel/blob';
+import { setEdgeConfig, getEdgeConfig } from '../lib/edge-config';
+import type { PutBlobResult } from '@vercel/blob';
+
+// Test-Button zum Debuggen
+const TestEdgeConfig = () => {
+  const testConfig = async () => {
+    try {
+      console.log('Testing Edge Config...');
+      
+      // Speichern testen
+      await setEdgeConfig('test', { hello: 'world' });
+      console.log('Edge Config write test successful!');
+      
+      // Lesen testen
+      const result = await getEdgeConfig('test');
+      console.log('Read result:', result);
+    } catch (error) {
+      console.error('Edge Config Error:', error);
+    }
+  };
+
+  return (
+    <button 
+      onClick={testConfig}
+      className="px-4 py-2 bg-blue-500 text-white rounded"
+    >
+      Test Edge Config
+    </button>
+  );
+};
+
+// Test-Button für Blob Upload
+const TestBlobUpload = () => {
+  const [blob, setBlob] = useState<PutBlobResult | null>(null);
+  
+  const testUpload = async () => {
+    try {
+      console.log('Starting test blob upload...');
+      
+      // Erstelle ein Test-PDF
+      const testContent = new Blob(['Test PDF Content'], { type: 'application/pdf' });
+      const testFile = new File([testContent], 'test.pdf', { type: 'application/pdf' });
+      
+      const response = await fetch(
+        `/api/upload?filename=test-${Date.now()}.pdf`,
+        {
+          method: 'POST',
+          body: testFile,
+        }
+      );
+
+      const newBlob = await response.json();
+      console.log('Upload successful:', newBlob);
+      setBlob(newBlob);
+      
+      // Öffne die URL
+      if (newBlob.url) {
+        window.open(newBlob.url, '_blank');
+      }
+      
+    } catch (error) {
+      console.error('Upload failed:', error);
+    }
+  };
+
+  return (
+    <div>
+      <button 
+        onClick={testUpload}
+        className="px-4 py-2 bg-green-500 text-white rounded"
+      >
+        Test Blob Upload
+      </button>
+      {blob && (
+        <div className="mt-2">
+          Blob URL: <a href={blob.url} target="_blank" rel="noopener noreferrer">{blob.url}</a>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function Upload() {
   // Fester Vertragsinitiator mit Adresse
@@ -68,56 +150,72 @@ export default function Upload() {
       return;
     }
 
-    // Erstelle einen neuen Vertragsdatensatz
-    const contractData = {
-      contractId: `NDA-${Date.now()}`,
-      type: "NDA",
-      status: "pending",
-      createdAt: new Date().toISOString(),
-      parties: [
-        {
-          ...initiator,
-          signature: null,
-          signedAt: null
-        },
-        {
-          ...recipient,
-          role: "receiving_party",
-          signature: null,
-          signedAt: null
-        }
-      ],
-      documentDetails: {
-        title: "Vertraulichkeitsvereinbarung",
-        validFrom: new Date().toISOString(),
-        validUntil: new Date(Date.now() + 63072000000).toISOString(), // +2 Jahre
-        pdfFile: file.name,
-        hash: null
-      }
-    };
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('contractData', JSON.stringify(contractData));
-
     try {
-      const response = await fetch('/api/upload', {
+      console.log('1. Starting upload process', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type
+      });
+
+      // 1. PDF zu Blob hochladen
+      const uploadUrl = `/api/upload?filename=${encodeURIComponent(`nda-${Date.now()}-${file.name}`)}`;
+      const response = await fetch(uploadUrl, {
         method: 'POST',
-        body: formData,
+        body: file,
       });
 
       if (!response.ok) {
-        throw new Error('Upload fehlgeschlagen');
+        throw new Error('PDF upload failed');
       }
 
-      const data = await response.json();
-      setUploadedContractId(data.contractId);
+      const blobData = await response.json();
+      console.log('2. PDF uploaded to Blob:', blobData);
+
+      // 2. Contract Daten vorbereiten
+      const contractId = `NDA-${Date.now()}`;
+      const contractData = {
+        id: contractId,
+        createdAt: new Date().toISOString(),
+        status: 'pending',
+        pdfUrl: blobData.url,
+        initiator: {
+          name: initiator.name,
+          representative: initiator.representative,
+          address: initiator.address,
+          role: initiator.role
+        },
+        recipient: {
+          name: recipient.name,
+          representative: recipient.representative,
+          address: recipient.address
+        }
+      };
+
+      // 3. Contract speichern
+      const contractResponse = await fetch('/api/edge-config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(contractData)
+      });
+
+      if (!contractResponse.ok) {
+        const error = await contractResponse.json();
+        throw new Error(error.error || 'Failed to save contract data');
+      }
+
+      console.log('3. Contract data saved:', contractId);
+      setUploadedContractId(contractId);
       setShowSuccess(true);
 
+      // 4. Zur Signature Seite weiterleiten
+      router.push(`/signature/${contractId}`);
+
     } catch (error) {
-      console.error('Upload error:', error);
-      setErrorMessage('Fehler beim Upload. Bitte versuchen Sie es erneut.');
+      console.error('Upload failed:', error);
       setShowError(true);
+      setErrorMessage(`Upload fehlgeschlagen: ${error.message}`);
     }
   };
 
@@ -129,9 +227,54 @@ export default function Upload() {
   // Prüfe ob alle Bedingungen erfüllt sind
   const isFormValid = file && isDocumentValid && isLegallyConfirmed;
 
+  const handleUpload = async () => {
+    try {
+      if (!file) return;
+
+      console.log('1. Starting upload process', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type
+      });
+
+      // Debug: URL zusammenbauen
+      const uploadUrl = `/api/upload?filename=${encodeURIComponent(`nda-${Date.now()}-${file.name}`)}`;
+      console.log('Upload URL:', uploadUrl);
+
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        body: file,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Upload response error:', error);
+        throw new Error(error.error || 'Upload failed');
+      }
+
+      const blobData = await response.json();
+      console.log('2. PDF uploaded to Blob:', blobData);
+
+      // Für den Test: URL öffnen
+      if (blobData.url) {
+        window.open(blobData.url, '_blank');
+      }
+
+      setShowSuccess(true);
+
+    } catch (error) {
+      console.error('Upload failed:', error);
+      setShowError(true);
+      setErrorMessage(`Upload fehlgeschlagen: ${error.message}`);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       <h1 className="text-2xl font-bold mb-6">NDA Upload</h1>
+
+      <TestEdgeConfig />
+      <TestBlobUpload />
 
       {/* Initiator Info (fest) */}
       <div className="bg-gray-50 p-4 rounded-lg mb-6">

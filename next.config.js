@@ -5,6 +5,12 @@ const nextConfig = {
   },
   typescript: {
     ignoreBuildErrors: true
+  },
+  experimental: {
+    serverActions: true,
+  },
+  env: {
+    EDGE_CONFIG: process.env.EDGE_CONFIG,
   }
 }
 

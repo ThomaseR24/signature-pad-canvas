@@ -7,8 +7,18 @@ async function getContract(contractId: string): Promise<Contract | null> {
   try {
     const contractsPath = path.join(process.cwd(), 'data/contracts.json');
     const data = await fs.readFile(contractsPath, 'utf8');
-    const contracts = JSON.parse(data).contracts;
-    return contracts.find((c: Contract) => c.contractId === contractId) || null;
+    const contracts = JSON.parse(data);
+    
+    console.log('Looking for contract:', contractId);
+    // Suche nach 'id' statt 'contractId'
+    const contract = contracts.find((c: Contract) => c.id === contractId);
+    
+    if (!contract) {
+      console.log('No contract found with id:', contractId);
+      return null;
+    }
+    
+    return contract;
   } catch (error) {
     console.error('Error loading contract:', error);
     return null;
@@ -16,17 +26,30 @@ async function getContract(contractId: string): Promise<Contract | null> {
 }
 
 interface PageProps {
-  params: {
-    contractId: string;
-  };
+  params: Promise<{ contractId: string }>;
 }
 
 export default async function SignaturePage({ params }: PageProps) {
-  const contractId = params.contractId;
+  // Warten auf params
+  const resolvedParams = await params;
+  const contractId = resolvedParams.contractId;
+  
+  console.log('Loading contract:', contractId);
   const contract = await getContract(contractId);
 
   if (!contract) {
-    return <div className="min-h-screen bg-background p-8">Vertrag nicht gefunden</div>;
+    return (
+      <div className="min-h-screen bg-background p-8">
+        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6">
+          <h1 className="text-2xl font-bold text-center mb-8">
+            Vertrag nicht gefunden
+          </h1>
+          <p className="text-center text-gray-600">
+            Der Vertrag mit der ID {contractId} konnte nicht gefunden werden.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -40,7 +63,7 @@ export default async function SignaturePage({ params }: PageProps) {
         <div className="mb-8">
           <div className="bg-gray-50 rounded-lg p-4 mb-6">
             <h2 className="text-lg font-semibold mb-2">Vertragsinformationen</h2>
-            <p className="text-sm text-gray-600">Vertrag ID: {contract.contractId}</p>
+            <p className="text-sm text-gray-600">Vertrag ID: {contract.id}</p>
             <p className="text-sm text-gray-600">
               Erstellt am: {new Date(contract.createdAt).toLocaleString('de-DE')}
             </p>
@@ -51,21 +74,14 @@ export default async function SignaturePage({ params }: PageProps) {
             <div className="space-y-2">
               <h3 className="font-medium">Initiator:</h3>
               <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="font-medium">{contract.parties[0].name}</p>
-                <p>{contract.parties[0].representative.name}</p>
+                <p className="font-medium">{contract.initiator.name}</p>
+                <p>{contract.initiator.representative.name}</p>
                 <p className="text-sm text-gray-600">
-                  {contract.parties[0].representative.position}
+                  {contract.initiator.representative.position}
                 </p>
                 <p className="text-sm text-gray-600">
-                  {contract.parties[0].representative.email}
+                  {contract.initiator.representative.email}
                 </p>
-                <div className="mt-2 text-sm text-gray-600">
-                  <p>{contract.parties[0].address.street}</p>
-                  <p>
-                    {contract.parties[0].address.zipCode} {contract.parties[0].address.city}
-                  </p>
-                  <p>{contract.parties[0].address.country}</p>
-                </div>
               </div>
             </div>
 
@@ -73,21 +89,14 @@ export default async function SignaturePage({ params }: PageProps) {
             <div className="space-y-2">
               <h3 className="font-medium">Partner:</h3>
               <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="font-medium">{contract.parties[1].name}</p>
-                <p>{contract.parties[1].representative.name}</p>
+                <p className="font-medium">{contract.recipient.name}</p>
+                <p>{contract.recipient.representative.name}</p>
                 <p className="text-sm text-gray-600">
-                  {contract.parties[1].representative.position}
+                  {contract.recipient.representative.position}
                 </p>
                 <p className="text-sm text-gray-600">
-                  {contract.parties[1].representative.email}
+                  {contract.recipient.representative.email}
                 </p>
-                <div className="mt-2 text-sm text-gray-600">
-                  <p>{contract.parties[1].address.street}</p>
-                  <p>
-                    {contract.parties[1].address.zipCode} {contract.parties[1].address.city}
-                  </p>
-                  <p>{contract.parties[1].address.country}</p>
-                </div>
               </div>
             </div>
           </div>
@@ -99,7 +108,7 @@ export default async function SignaturePage({ params }: PageProps) {
           <div className="border rounded-lg p-4">
             <div className="mb-4">
               <a 
-                href={contract.documentDetails.pdfFile}
+                href={contract.pdfUrl}
                 target="_blank"
                 className="text-blue-600 hover:text-blue-800 flex items-center gap-2"
               >
@@ -111,7 +120,7 @@ export default async function SignaturePage({ params }: PageProps) {
             </div>
             
             <iframe
-              src={`${contract.documentDetails.pdfFile}#view=FitH`}
+              src={`${contract.pdfUrl}#view=FitH`}
               className="w-full h-[500px] border rounded"
             />
           </div>
