@@ -12,14 +12,13 @@ interface SignatureClientProps {
 export default function SignatureClient({ contract }: SignatureClientProps) {
   const router = useRouter();
   const [isSigningInProgress, setIsSigningInProgress] = useState(false);
-  const [signatureImage] = useState<string>('');
+  const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const [signatures, setSignatures] = useState<{[key: string]: {
     name: string;
     image: string | null;
   }}>({});
 
-  // Funktion zum Generieren der Unterschrift
   const generateSignature = async (name: string): Promise<string | null> => {
     const canvas = document.createElement('canvas');
     canvas.width = 400;
@@ -37,7 +36,6 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
     return null;
   };
 
-  // Initial Namen setzen
   useEffect(() => {
     const initialSigs = {
       initiator: {
@@ -53,7 +51,6 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
     updateSignatures(initialSigs);
   }, [contract]);
 
-  // Unterschriften generieren
   const updateSignatures = async (sigs: typeof signatures) => {
     const updated = {...sigs};
     for (const [key, sig] of Object.entries(updated)) {
