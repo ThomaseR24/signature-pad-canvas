@@ -4,9 +4,14 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DeleteOverlay from './components/DeleteOverlay';
+import { Contract } from './types/contract';
 
-export default function ContractsList({ contracts: initialContracts }: { contracts: any[] }) {
-  const [contracts, setContracts] = useState(initialContracts);
+interface ContractsListProps {
+  contracts: Contract[];
+}
+
+export default function ContractsList({ contracts }: ContractsListProps) {
+  const [contracts, setContracts] = useState(contracts);
   const [showDeleteOverlay, setShowDeleteOverlay] = useState(false);
   const [contractToDelete, setContractToDelete] = useState<string | null>(null);
   const router = useRouter();

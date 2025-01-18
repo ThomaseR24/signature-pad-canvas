@@ -1,6 +1,12 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { NextRequest, NextResponse } from 'next/server';
+import { Contract } from '@/app/types/contract';
+
+export async function DELETE(request: Request) {
+  const { contractId }: { contractId: string } = await request.json();
+  // Rest des Codes...
+}
 
 export async function POST(request: NextRequest) {
   try {

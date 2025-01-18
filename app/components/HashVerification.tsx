@@ -2,22 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import { calculateDocumentHash } from '@/app/utils/documentHash';
+import { Contract } from '@/app/types/contract';
 
 interface HashVerificationProps {
-  storedHash: string;
-  documentData: any;
+  contract: Contract;
 }
 
-export default function HashVerification({ storedHash, documentData }: HashVerificationProps) {
+export default function HashVerification({ contract }: HashVerificationProps) {
   const [currentHash, setCurrentHash] = useState<string | null>(null);
   const [isValid, setIsValid] = useState<boolean | null>(null);
 
   useEffect(() => {
     const verifyHash = async () => {
       try {
-        const calculatedHash = await calculateDocumentHash(documentData);
+        const calculatedHash = await calculateDocumentHash(contract);
         setCurrentHash(calculatedHash);
-        setIsValid(calculatedHash === storedHash);
+        setIsValid(calculatedHash === contract.hash);
       } catch (error) {
         console.error('Error verifying hash:', error);
         setIsValid(false);
@@ -25,7 +25,7 @@ export default function HashVerification({ storedHash, documentData }: HashVerif
     };
 
     verifyHash();
-  }, [documentData, storedHash]);
+  }, [contract]);
 
   return (
     <div className="mt-6 p-4 bg-gray-50 rounded-lg">
@@ -34,7 +34,7 @@ export default function HashVerification({ storedHash, documentData }: HashVerif
       <div className="space-y-2">
         <p className="text-sm text-gray-600">
           <span className="font-medium">Gespeicherter Hash:</span><br/>
-          <code className="text-xs break-all bg-gray-100 p-1 rounded">{storedHash}</code>
+          <code className="text-xs break-all bg-gray-100 p-1 rounded">{contract.hash}</code>
         </p>
         
         {currentHash && (

@@ -1,10 +1,20 @@
+import { Contract } from '@/app/types/contract';
 import { promises as fs } from 'fs';
 import { NextResponse } from 'next/server';
 import path from 'path';
 
+interface SignatureRequest {
+  contractId: string;
+  party: 'initiator' | 'partner';
+  timestamp: string;
+  documentHash: string;
+  signatureImage: string;
+  name: string;
+}
+
 export async function POST(request: Request) {
   try {
-    const { contractId, party, timestamp, documentHash, signatureImage } = await request.json();
+    const data: SignatureRequest = await request.json();
 
     // Lade aktuelle Verträge
     const contractsPath = path.join(process.cwd(), 'data', 'contracts.json');
@@ -12,20 +22,20 @@ export async function POST(request: Request) {
     const data = JSON.parse(contractsData);
 
     // Finde den richtigen Vertrag
-    const contract = data.contracts.find((c: any) => c.contractId === contractId);
+    const contract = data.contracts.find((c: any) => c.contractId === data.contractId);
     if (!contract) {
       return NextResponse.json({ error: 'Vertrag nicht gefunden' }, { status: 404 });
     }
 
     // Bestimme den Index der zu aktualisierenden Partei
-    const partyIndex = party === 'initiator' ? 0 : 1;
+    const partyIndex = data.party === 'initiator' ? 0 : 1;
 
     // Aktualisiere die Signatur-Daten
     contract.parties[partyIndex] = {
       ...contract.parties[partyIndex],
-      signature: documentHash,
-      signatureImage: signatureImage, // Speichere das Signatur-Image
-      signatureTimestamp: timestamp
+      signature: data.documentHash,
+      signatureImage: data.signatureImage, // Speichere das Signatur-Image
+      signatureTimestamp: data.timestamp
     };
 
     // Speichere die aktualisierten Daten

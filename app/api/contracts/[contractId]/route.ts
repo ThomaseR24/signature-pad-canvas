@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { NextRequest, NextResponse } from 'next/server';
+import { Contract } from '@/app/types/contract';
 
 export async function GET(
   request: NextRequest,

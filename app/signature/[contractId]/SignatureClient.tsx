@@ -49,7 +49,7 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
     });
     setSignatures(initialSigs);
     updateSignatures(initialSigs);
-  }, [contract]);
+  }, [contract, updateSignatures]);
 
   // Unterschriften für alle Parteien generieren
   const updateSignatures = async (sigs: typeof signatures) => {
