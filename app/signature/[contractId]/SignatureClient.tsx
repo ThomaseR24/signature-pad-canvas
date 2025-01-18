@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { calculateDocumentHash } from '@/app/utils/documentHash';
 
 interface SignatureClientProps {
   contract: any;
@@ -55,6 +56,9 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
       setIsSigningInProgress(true);
       const name = contract.parties[partyIndex].representative.name;
       
+      // Document Hash berechnen
+      const documentHash = await calculateDocumentHash(contract);
+      
       // Unterschrift generieren
       const signatureImg = await generateSignature(name);
       setSignatureImage(signatureImg);
@@ -69,7 +73,7 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
           contractId: contract.contractId,
           party: partyIndex === 0 ? 'initiator' : 'partner',
           timestamp: new Date().toISOString(),
-          documentHash: '7d53ad5cbd397a702d0063bdd623230822b81ab255cac29573aae274b2c83da7',
+          documentHash: documentHash,
           signatureImage: signatureImg,
         }),
       });
@@ -78,7 +82,6 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
         throw new Error('Signatur fehlgeschlagen');
       }
 
-      // Erfolgreich - Overlay anzeigen
       setShowSuccessOverlay(true);
     } catch (error) {
       console.error('Fehler beim Signieren:', error);
@@ -90,7 +93,7 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
 
   // Erfolgs-Overlay bestätigen und zur Übersicht navigieren
   const handleSuccessConfirm = () => {
-    router.push('/');  // Zur Übersicht navigieren
+    router.push('/');
   };
 
   // Bestimmen, welcher Button angezeigt werden soll
