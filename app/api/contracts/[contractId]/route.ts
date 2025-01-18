@@ -10,10 +10,10 @@ export async function GET(
   try {
     const contractsPath = path.join(process.cwd(), 'data/contracts.json');
     const data = await fs.readFile(contractsPath, 'utf8');
-    const contracts = JSON.parse(data).contracts;
-    
-    const contract = contracts.find((c: any) => c.contractId === params.contractId);
-    
+    const contracts = JSON.parse(data);
+
+    const contract = contracts.find((c: Contract) => c.id === params.contractId);
+
     if (!contract) {
       return NextResponse.json(
         { error: 'Contract not found' },
@@ -25,7 +25,7 @@ export async function GET(
   } catch (error) {
     console.error('Error loading contract:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal Server Error' },
       { status: 500 }
     );
   }
