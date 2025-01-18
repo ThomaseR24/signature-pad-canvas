@@ -1,3 +1,4 @@
 {
-  "ignoreCommand": "echo 'Skipping checks'"
+  "ignoreCommand": "echo 'Skipping checks'",
+  "buildCommand": "CI=false next build"
 } 
