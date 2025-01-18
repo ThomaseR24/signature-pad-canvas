@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface SignatureClientProps {
@@ -12,6 +12,24 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
   const [isSigningInProgress, setIsSigningInProgress] = useState(false);
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+  const [previewSignatures, setPreviewSignatures] = useState<{[key: number]: string}>({});
+
+  // Generiere Vorschau-Signaturen beim ersten Laden
+  useEffect(() => {
+    const generatePreviews = async () => {
+      const previews: {[key: number]: string} = {};
+      for (let i = 0; i < contract.parties.length; i++) {
+        const name = contract.parties[i].representative.name;
+        const preview = await generateSignature(name);
+        if (preview) {
+          previews[i] = preview;
+        }
+      }
+      setPreviewSignatures(previews);
+    };
+
+    generatePreviews();
+  }, [contract]);
 
   // Funktion zum Generieren der Unterschrift
   const generateSignature = async (name: string) => {
@@ -78,27 +96,50 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
   // Bestimmen, welcher Button angezeigt werden soll
   const renderSignatureButton = (partyIndex: number) => {
     const party = contract.parties[partyIndex];
+    const name = party.representative.name;
     
     if (party.signature) {
       return (
         <div className="p-4 bg-green-50 rounded-lg">
-          <p className="text-green-800">Signiert von {party.representative.name}</p>
+          <p className="text-green-800">Signiert von {name}</p>
         </div>
       );
     }
 
     return (
-      <button
-        onClick={() => handleSignature(partyIndex)}
-        disabled={isSigningInProgress}
-        className="w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-      >
-        {isSigningInProgress ? (
-          <span>Signatur wird erstellt...</span>
-        ) : (
-          <span>Als {party.representative.name} signieren</span>
-        )}
-      </button>
+      <div className="space-y-4">
+        {/* Vorschau der Unterschrift */}
+        <div className="p-4 bg-gray-50 border rounded-lg">
+          <p className="text-sm text-gray-600 mb-2">Ihre Unterschrift wird so aussehen:</p>
+          <div className="h-[100px] flex items-center justify-center border-b border-gray-300">
+            {previewSignatures[partyIndex] && (
+              <img
+                src={previewSignatures[partyIndex]}
+                alt={`Unterschrift von ${name}`}
+                className="max-h-[80px]"
+              />
+            )}
+          </div>
+        </div>
+        
+        {/* Signatur Button */}
+        <button
+          onClick={() => handleSignature(partyIndex)}
+          disabled={isSigningInProgress}
+          className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {isSigningInProgress ? (
+            <span>Signatur wird erstellt...</span>
+          ) : (
+            <>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+              <span>Jetzt als {name} unterschreiben</span>
+            </>
+          )}
+        </button>
+      </div>
     );
   };
 
