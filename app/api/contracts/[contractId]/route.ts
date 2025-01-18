@@ -1,24 +1,23 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { NextRequest } from 'next/server';
 import { Contract } from '@/app/types/contract';
 
-interface RouteContext {
+type Props = {
   params: {
-    contractId: string;
-  };
+    contractId: string
+  }
 }
 
 export async function GET(
-  _request: NextRequest,
-  context: RouteContext
+  request: Request,
+  { params }: Props
 ) {
   try {
     const contractsPath = path.join(process.cwd(), 'data/contracts.json');
     const data = await fs.readFile(contractsPath, 'utf8');
     const contracts = JSON.parse(data);
 
-    const contract = contracts.find((c: Contract) => c.id === context.params.contractId);
+    const contract = contracts.find((c: Contract) => c.id === params.contractId);
 
     if (!contract) {
       return Response.json(
