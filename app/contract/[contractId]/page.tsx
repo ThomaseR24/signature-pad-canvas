@@ -52,27 +52,6 @@ async function getContract(contractId: string): Promise<Contract | null> {
   }
 }
 
-'use client';
-
-interface DeleteButtonProps {
-  onDelete: () => void;
-}
-
-function DeleteButton({ onDelete }: DeleteButtonProps) {
-  return (
-    <button
-      className="inline-block px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-      onClick={(e) => {
-        if (!confirm('Sind Sie sicher, dass Sie diesen Vertrag löschen möchten?')) {
-          e.preventDefault();
-        }
-      }}
-    >
-      Vertrag löschen
-    </button>
-  );
-}
-
 export default async function ContractDetailsPage({ 
   params 
 }: { 
@@ -244,21 +223,13 @@ export default async function ContractDetailsPage({
           </div>
         </div>
 
-        <div className="mt-8 text-center space-x-4">
+        <div className="mt-8 text-center">
           <Link 
             href="/"
             className="inline-block px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
           >
             Zurück zur Übersicht
           </Link>
-          
-          <form action={async () => {
-            'use server';
-            await deleteContract(params.contractId);
-            redirect('/');
-          }}>
-            <DeleteButton />
-          </form>
         </div>
       </div>
     </div>
