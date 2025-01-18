@@ -2,15 +2,9 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { Contract } from '@/app/types/contract';
 
-type Props = {
-  params: {
-    contractId: string
-  }
-}
-
 export async function GET(
-  request: Request,
-  { params }: Props
+  _request: Request,
+  { params }: { params: { contractId: string } }
 ) {
   try {
     const contractsPath = path.join(process.cwd(), 'data/contracts.json');
