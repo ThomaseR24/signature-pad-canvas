@@ -8,7 +8,6 @@ import UploadSuccessOverlay from '../components/UploadSuccessOverlay';
 import ErrorOverlay from '../components/ErrorOverlay';
 import DocumentValidation from '../components/DocumentValidation';
 import LegalConfirmation from '../components/LegalConfirmation';
-import { put } from '@vercel/blob';
 import { setEdgeConfig, getEdgeConfig } from '../lib/edge-config';
 import type { PutBlobResult } from '@vercel/blob';
 

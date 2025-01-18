@@ -12,7 +12,7 @@ interface SignatureClientProps {
 export default function SignatureClient({ contract }: SignatureClientProps) {
   const router = useRouter();
   const [isSigningInProgress, setIsSigningInProgress] = useState(false);
-  const [signatureImage, setSignatureImage] = useState<string | null>(null);
+  const [signatureImage] = useState<string>('');
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const [signatures, setSignatures] = useState<{[key: string]: {
     name: string;

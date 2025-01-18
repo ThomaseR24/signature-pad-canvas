@@ -2,7 +2,7 @@
 
 import { get } from '@vercel/edge-config';
 
-export async function getEdgeConfig(key: string) {
+export async function getEdgeConfig<T>(key: string): Promise<T | null> {
   try {
     return await get(key);
   } catch (error) {

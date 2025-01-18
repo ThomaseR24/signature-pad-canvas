@@ -48,16 +48,13 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({ success: true, data: contract });
-  } catch (error) {
-    console.error('Get Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to get contract' },
-      { status: 500 }
-    );
+  } catch (err) {
+    console.error('Failed to fetch edge config:', err);
+    return Response.json({ error: err.message }, { status: 500 });
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: Request): Promise<Response> {
   try {
     const contractData = await request.json();
     
