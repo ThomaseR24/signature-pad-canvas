@@ -3,7 +3,6 @@
 
 import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import UploadSuccessOverlay from '../components/UploadSuccessOverlay';
 import ErrorOverlay from '../components/ErrorOverlay';
@@ -300,7 +299,7 @@ export default function Upload() {
           >
             <input {...getInputProps()} />
             <p className="text-gray-600">
-              Drag 'n' drop eine PDF-Datei hier, oder klicken um eine auszuwählen
+              Drag &apos;n&apos; drop eine PDF-Datei hier, oder klicken um eine auszuwählen
             </p>
           </div>
 
