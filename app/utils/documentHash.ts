@@ -1,11 +1,6 @@
-export async function calculateDocumentHash(document: {
-  contractId: string;
-  parties: any[];
-  documentDetails: {
-    content: string;
-  };
-  createdAt: string;
-}) {
+import { Contract } from '../types/contract';
+
+export async function calculateDocumentHash(document: Contract) {
   // Erstelle ein deterministisches Objekt mit nur den relevanten Daten
   const relevantData = {
     contractId: document.contractId,

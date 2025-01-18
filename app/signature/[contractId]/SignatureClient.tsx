@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { calculateDocumentHash } from '@/app/utils/documentHash';
+import Image from 'next/image';
+import { Contract, Party } from '@/app/types/contract';
 
 interface SignatureClientProps {
-  contract: any;
+  contract: Contract;
 }
 
 export default function SignatureClient({ contract }: SignatureClientProps) {
@@ -13,31 +15,13 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
   const [isSigningInProgress, setIsSigningInProgress] = useState(false);
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
-  const [previewSignatures, setPreviewSignatures] = useState<{[key: number]: string}>({});
   const [signatures, setSignatures] = useState<{[key: number]: {
     name: string;
     image: string | null;
   }}>({});
 
-  // Generiere Vorschau-Signaturen beim ersten Laden
-  useEffect(() => {
-    const generatePreviews = async () => {
-      const previews: {[key: number]: string} = {};
-      for (let i = 0; i < contract.parties.length; i++) {
-        const name = contract.parties[i].representative.name;
-        const preview = await generateSignature(name);
-        if (preview) {
-          previews[i] = preview;
-        }
-      }
-      setPreviewSignatures(previews);
-    };
-
-    generatePreviews();
-  }, [contract]);
-
   // Funktion zum Generieren der Unterschrift
-  const generateSignature = async (name: string) => {
+  const generateSignature = async (name: string): Promise<string | null> => {
     const canvas = document.createElement('canvas');
     canvas.width = 400;
     canvas.height = 100;
@@ -57,7 +41,7 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
   // Initial Namen setzen
   useEffect(() => {
     const initialSigs: {[key: number]: {name: string; image: string | null}} = {};
-    contract.parties.forEach((party, index) => {
+    contract.parties.forEach((party: Party, index: number) => {
       initialSigs[index] = {
         name: party.representative.name,
         image: null
@@ -170,10 +154,12 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
           <p className="text-sm text-gray-600 mb-2">Ihre Unterschrift wird so aussehen:</p>
           <div className="h-[100px] flex items-center justify-center border-b border-gray-300">
             {currentSignature.image && (
-              <img
-                src={currentSignature.image}
+              <Image 
+                src={currentSignature.image} 
                 alt={`Unterschrift von ${currentSignature.name}`}
-                className="max-h-[80px]"
+                width={200} 
+                height={100}
+                className="border border-gray-300 rounded"
               />
             )}
           </div>
@@ -206,10 +192,12 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
       {signatureImage && (
         <div className="mt-4 p-4 border rounded-lg">
           <p className="text-sm text-gray-600 mb-2">Generierte Unterschrift:</p>
-          <img 
+          <Image 
             src={signatureImage} 
             alt="Generierte Unterschrift" 
-            className="max-h-[100px] mx-auto"
+            width={200} 
+            height={100}
+            className="border border-gray-300 rounded"
           />
         </div>
       )}
