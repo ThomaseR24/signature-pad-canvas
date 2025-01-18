@@ -111,6 +111,17 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
 
     return (
       <div className="space-y-4">
+        {/* Name Input */}
+        <div className="space-y-2">
+          <label className="block text-sm text-gray-600">Name für die Unterschrift:</label>
+          <input
+            type="text"
+            value={name}
+            readOnly
+            className="w-full p-2 border rounded-lg bg-gray-50 text-gray-700"
+          />
+        </div>
+
         {/* Vorschau der Unterschrift */}
         <div className="p-4 bg-gray-50 border rounded-lg">
           <p className="text-sm text-gray-600 mb-2">Ihre Unterschrift wird so aussehen:</p>

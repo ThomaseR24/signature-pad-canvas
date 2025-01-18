@@ -1,3 +1,54 @@
 {
-  "contracts": []
+  "contracts": [
+    {
+      "contractId": "NDA-1737203003294",
+      "type": "NDA",
+      "status": "pending",
+      "createdAt": "2025-01-18T12:23:23.294Z",
+      "parties": [
+        {
+          "name": "Technologie Innovation GmbH",
+          "representative": {
+            "name": "Dr. Thomas Weber",
+            "position": "Geschäftsführer",
+            "email": "t.weber@tech-innovation.de"
+          },
+          "address": {
+            "street": "Innovationsstraße 42",
+            "city": "München",
+            "zipCode": "80333",
+            "country": "Deutschland"
+          },
+          "role": "disclosing_party",
+          "signature": null,
+          "signedAt": null
+        },
+        {
+          "name": "Digital Solutions AG",
+          "representative": {
+            "name": "Maria Schmidt",
+            "position": "Projektleiterin",
+            "email": "m.schmidt@digital-solutions.de"
+          },
+          "address": {
+            "street": "Digitalstraße 15",
+            "city": "Berlin",
+            "zipCode": "10115",
+            "country": "Deutschland"
+          },
+          "role": "receiving_party",
+          "signature": null,
+          "signedAt": null
+        }
+      ],
+      "documentDetails": {
+        "title": "Vertraulichkeitsvereinbarung",
+        "validFrom": "2025-01-18T12:23:23.294Z",
+        "validUntil": "2027-01-18T12:23:23.294Z",
+        "pdfFile": "/uploads/nda-1737203003424.pdf",
+        "hash": null,
+        "uploadedAt": "2025-01-18T12:23:23.431Z"
+      }
+    }
+  ]
 }
