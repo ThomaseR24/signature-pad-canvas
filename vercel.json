@@ -1,4 +1,7 @@
 {
-  "ignoreCommand": "echo 'Skipping checks'",
-  "buildCommand": "CI=false next build"
+  "buildCommand": "next build",
+  "devCommand": "next dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "ignoreCommand": "echo 'Skipping checks'"
 } 
