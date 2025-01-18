@@ -2,7 +2,7 @@
 
 import { Contract } from '@/app/types/contract';
 import Link from 'next/link';
-import { deleteContract } from '@/app/actions/deleteContract';
+import { deleteContract } from '../actions/deleteContract';
 import { useState } from 'react';
 import DeleteModal from './DeleteModal';
 

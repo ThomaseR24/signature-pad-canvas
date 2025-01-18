@@ -2,8 +2,8 @@
 
 import { promises as fs } from 'fs';
 import path from 'path';
-import { Contract } from '@/app/types/contract';
 import { revalidatePath } from 'next/cache';
+import { Contract } from '../types/contract';
 
 export async function deleteContract(contractId: string) {
   try {

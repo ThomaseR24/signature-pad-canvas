@@ -1,16 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true
-  },
   experimental: {
-    serverActions: true,
+    serverActions: {
+      allowedOrigins: ['localhost:3000']
+    }
   },
-  env: {
-    EDGE_CONFIG: process.env.EDGE_CONFIG,
+  images: {
+    domains: ['localhost']
   }
 }
 
