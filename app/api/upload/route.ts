@@ -1,7 +1,9 @@
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, readFile } from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import { existsSync } from 'fs';
+import { Contract } from '@/app/types/contract';
+import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,20 +27,33 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now();
     const fileExtension = path.extname(file.name);
     const fileName = `nda-${timestamp}${fileExtension}`;
+    const filePath = path.join(uploadDir, fileName);
     
     // Speichere PDF
-    await writeFile(
-      path.join(uploadDir, fileName), 
-      Buffer.from(await file.arrayBuffer())
-    );
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+    await writeFile(filePath, fileBuffer);
+
+    // Berechne Hash direkt aus dem PDF-Inhalt
+    const hash = crypto
+      .createHash('sha256')
+      .update(fileBuffer)
+      .digest('hex');
+
+    console.log('Generated hash from PDF:', hash);
 
     // Bereite Vertragsdaten vor
-    const newContract = {
-      ...contractData,
+    const newContract: Contract = {
+      contractId: contractData.contractId,
+      type: 'NDA' as const,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      parties: contractData.parties,
       documentDetails: {
-        ...contractData.documentDetails,
+        title: "Vertraulichkeitsvereinbarung",
+        validFrom: new Date().toISOString(),
+        validUntil: new Date(Date.now() + 63072000000).toISOString(), // +2 Jahre
         pdfFile: `/uploads/${fileName}`,
-        uploadedAt: new Date().toISOString()
+        hash: hash  // Speichere den berechneten Hash
       }
     };
 
@@ -47,8 +62,9 @@ export async function POST(request: NextRequest) {
     let contracts = [];
     
     if (existsSync(contractsPath)) {
-      const contractsRaw = await import(`@/data/contracts.json`);
-      contracts = contractsRaw.contracts;
+      const data = await readFile(contractsPath, 'utf8');
+      const existingData = JSON.parse(data);
+      contracts = existingData.contracts || [];
     }
 
     contracts.push(newContract);

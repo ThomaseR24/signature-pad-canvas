@@ -1,34 +1,25 @@
-import { Contract } from '../types/contract';
+import { Contract } from '@/app/types/contract';
 
-export async function calculateDocumentHash(document: Contract) {
-  // Erstelle ein deterministisches Objekt mit nur den relevanten Daten
-  const relevantData = {
-    contractId: document.contractId,
-    content: document.documentDetails.content,
-    createdAt: document.createdAt,
-    // Nur die unveränderlichen Eigenschaften der Parteien
-    parties: document.parties.map(party => ({
-      name: party.name,
-      representative: {
-        name: party.representative.name,
-        position: party.representative.position,
-        email: party.representative.email
+export async function calculateDocumentHash(contract: Contract): Promise<string> {
+  try {
+    const response = await fetch('/api/hash', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      address: party.address
-    }))
-  };
+      body: JSON.stringify({
+        pdfPath: contract.documentDetails.pdfFile
+      })
+    });
 
-  // Sortiere die Objekt-Keys für konsistente Serialisierung
-  const sortedData = JSON.stringify(relevantData, Object.keys(relevantData).sort());
-  
-  console.log('Hash input data:', sortedData);
+    if (!response.ok) {
+      throw new Error('Hash calculation failed');
+    }
 
-  const msgBuffer = new TextEncoder().encode(sortedData);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  
-  console.log('Generated hash:', hash);
-  
-  return hash;
+    const data = await response.json();
+    return data.hash;
+  } catch (error) {
+    console.error('Error calculating document hash:', error);
+    throw error;
+  }
 } 

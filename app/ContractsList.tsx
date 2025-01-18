@@ -7,11 +7,11 @@ import DeleteOverlay from './components/DeleteOverlay';
 import { Contract } from './types/contract';
 
 interface ContractsListProps {
-  contracts: Contract[];
+  initialContracts: Contract[];
 }
 
-export default function ContractsList({ contracts }: ContractsListProps) {
-  const [contracts, setContracts] = useState(contracts);
+export default function ContractsList({ initialContracts = [] }: ContractsListProps) {
+  const [contracts, setContracts] = useState<Contract[]>(initialContracts || []);
   const [showDeleteOverlay, setShowDeleteOverlay] = useState(false);
   const [contractToDelete, setContractToDelete] = useState<string | null>(null);
   const router = useRouter();
@@ -69,59 +69,65 @@ export default function ContractsList({ contracts }: ContractsListProps) {
         </div>
 
         {/* Vertragsliste */}
-        {contracts.map((contract) => (
-          <div 
-            key={contract.contractId} 
-            className="grid grid-cols-7 gap-4 p-4 border-b hover:bg-gray-50"
-          >
-            <div className="text-sm">{contract.contractId}</div>
-            <div>{contract.parties[0].name}</div>
-            <div>{contract.parties[1].name}</div>
-            <div>
-              <span className={`px-2 py-1 rounded-full text-sm ${
-                contract.parties[0].signature && contract.parties[1].signature
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-yellow-100 text-yellow-800'
-              }`}>
-                {contract.parties[0].signature && contract.parties[1].signature 
-                  ? 'Signiert' 
-                  : 'Offen'}
-              </span>
-            </div>
-            <div className="text-sm">
-              {new Date(contract.createdAt).toLocaleDateString('de-DE')}
-            </div>
-            <div className="col-span-2 space-x-4">
-              <Link
-                href={`/contract/${contract.contractId}`}
-                className="text-gray-600 hover:text-gray-800"
-              >
-                Details
-              </Link>
-              {!(contract.parties[0].signature && contract.parties[1].signature) && (
+        {contracts?.length > 0 ? (
+          contracts.map((contract) => (
+            <div 
+              key={contract.contractId} 
+              className="grid grid-cols-7 gap-4 p-4 border-b hover:bg-gray-50"
+            >
+              <div className="text-sm">{contract.contractId}</div>
+              <div>{contract.parties[0].name}</div>
+              <div>{contract.parties[1].name}</div>
+              <div>
+                <span className={`px-2 py-1 rounded-full text-sm ${
+                  contract.parties[0].signature && contract.parties[1].signature
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-yellow-100 text-yellow-800'
+                }`}>
+                  {contract.parties[0].signature && contract.parties[1].signature 
+                    ? 'Signiert' 
+                    : 'Offen'}
+                </span>
+              </div>
+              <div className="text-sm">
+                {new Date(contract.createdAt).toLocaleDateString('de-DE')}
+              </div>
+              <div className="col-span-2 space-x-4">
                 <Link
-                  href={`/signature/${contract.contractId}`}
-                  className="text-blue-600 hover:text-blue-800"
+                  href={`/contract/${contract.contractId}`}
+                  className="text-gray-600 hover:text-gray-800"
                 >
-                  Signieren
+                  Details
                 </Link>
-              )}
-              <a 
-                href={contract.documentDetails.pdfFile} 
-                target="_blank"
-                className="text-gray-600 hover:text-gray-800"
-              >
-                PDF
-              </a>
-              <button
-                onClick={() => handleDeleteClick(contract.contractId)}
-                className="text-red-600 hover:text-red-800"
-              >
-                Löschen
-              </button>
+                {!(contract.parties[0].signature && contract.parties[1].signature) && (
+                  <Link
+                    href={`/signature/${contract.contractId}`}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    Signieren
+                  </Link>
+                )}
+                <a 
+                  href={contract.documentDetails.pdfFile} 
+                  target="_blank"
+                  className="text-gray-600 hover:text-gray-800"
+                >
+                  PDF
+                </a>
+                <button
+                  onClick={() => handleDeleteClick(contract.contractId)}
+                  className="text-red-600 hover:text-red-800"
+                >
+                  Löschen
+                </button>
+              </div>
             </div>
+          ))
+        ) : (
+          <div className="p-4 text-center text-gray-500">
+            Keine Verträge vorhanden
           </div>
-        ))}
+        )}
 
         {/* Neuer Vertrag Button */}
         <div className="mt-8">

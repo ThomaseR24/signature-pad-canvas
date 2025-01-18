@@ -17,12 +17,12 @@ export interface Party {
   address: Address;
   role?: 'disclosing_party' | 'receiving_party';
   signature?: string | null;
-  signedAt?: string | null;
+  signatureImage?: string | null;
+  signatureTimestamp?: string | null;
 }
 
 export interface DocumentDetails {
   title: string;
-  content?: string;
   validFrom: string;
   validUntil: string;
   pdfFile: string;

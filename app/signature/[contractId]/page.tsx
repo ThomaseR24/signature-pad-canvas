@@ -1,25 +1,29 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import SignatureClient from './SignatureClient';
+import { Contract } from '@/app/types/contract';
 
-async function getContract(contractId: string) {
+async function getContract(contractId: string): Promise<Contract | null> {
   try {
     const contractsPath = path.join(process.cwd(), 'data/contracts.json');
     const data = await fs.readFile(contractsPath, 'utf8');
     const contracts = JSON.parse(data).contracts;
-    return contracts.find((c: any) => c.contractId === contractId);
+    return contracts.find((c: Contract) => c.contractId === contractId) || null;
   } catch (error) {
     console.error('Error loading contract:', error);
     return null;
   }
 }
 
-export default async function SignaturePage({ 
-  params 
-}: { 
-  params: { contractId: string } 
-}) {
-  const contract = await getContract(params.contractId);
+interface PageProps {
+  params: {
+    contractId: string;
+  };
+}
+
+export default async function SignaturePage({ params }: PageProps) {
+  const contractId = params.contractId;
+  const contract = await getContract(contractId);
 
   if (!contract) {
     return <div className="min-h-screen bg-background p-8">Vertrag nicht gefunden</div>;

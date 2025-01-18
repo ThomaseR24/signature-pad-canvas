@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { calculateDocumentHash } from '@/app/utils/documentHash';
 import Image from 'next/image';
 import { Contract, Party } from '@/app/types/contract';
 
@@ -38,6 +37,16 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
     return null;
   };
 
+  // Unterschriften für alle Parteien generieren
+  const updateSignatures = async (sigs: typeof signatures) => {
+    const updated = {...sigs};
+    for (const [index, sig] of Object.entries(updated)) {
+      const image = await generateSignature(sig.name);
+      updated[Number(index)].image = image;
+    }
+    setSignatures(updated);
+  };
+
   // Initial Namen setzen
   useEffect(() => {
     const initialSigs: {[key: number]: {name: string; image: string | null}} = {};
@@ -49,17 +58,7 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
     });
     setSignatures(initialSigs);
     updateSignatures(initialSigs);
-  }, [contract, updateSignatures]);
-
-  // Unterschriften für alle Parteien generieren
-  const updateSignatures = async (sigs: typeof signatures) => {
-    const updated = {...sigs};
-    for (const [index, sig] of Object.entries(updated)) {
-      const image = await generateSignature(sig.name);
-      updated[Number(index)].image = image;
-    }
-    setSignatures(updated);
-  };
+  }, [contract]);
 
   const handleNameChange = async (partyIndex: number, newName: string) => {
     const updated = {
@@ -79,9 +78,6 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
       setIsSigningInProgress(true);
       const currentName = signatures[partyIndex].name;
       
-      // Document Hash berechnen
-      const documentHash = await calculateDocumentHash(contract);
-      
       // Unterschrift mit dem bearbeiteten Namen generieren
       const signatureImg = await generateSignature(currentName);
       setSignatureImage(signatureImg);
@@ -96,7 +92,6 @@ export default function SignatureClient({ contract }: SignatureClientProps) {
           contractId: contract.contractId,
           party: partyIndex === 0 ? 'initiator' : 'partner',
           timestamp: new Date().toISOString(),
-          documentHash: documentHash,
           signatureImage: signatureImg,
           name: currentName
         }),
