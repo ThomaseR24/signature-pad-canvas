@@ -143,72 +143,53 @@ export default function Upload() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!file) {
-      setErrorMessage('Bitte eine PDF-Datei hochladen.');
-      setShowError(true);
-      return;
-    }
+    if (!file) return;
 
     try {
-      console.log('1. Starting upload process', {
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type
-      });
-
-      // 1. PDF zu Blob hochladen
+      console.log('1. Starting upload process');
+      
+      // 1. PDF Upload (bleibt gleich)
       const uploadUrl = `/api/upload?filename=${encodeURIComponent(`nda-${Date.now()}-${file.name}`)}`;
       const response = await fetch(uploadUrl, {
         method: 'POST',
         body: file,
       });
-
-      if (!response.ok) {
-        throw new Error('PDF upload failed');
-      }
-
       const blobData = await response.json();
       console.log('2. PDF uploaded to Blob:', blobData);
 
-      // 2. Contract Daten vorbereiten
+      // 2. Contract Daten im korrekten Format für Edge Config
       const contractId = `NDA-${Date.now()}`;
-      const contractData = {
-        id: contractId,
-        createdAt: new Date().toISOString(),
-        status: 'pending',
-        pdfUrl: blobData.url,
-        initiator: {
-          name: initiator.name,
-          representative: initiator.representative,
-          address: initiator.address,
-          role: initiator.role
-        },
-        recipient: {
-          name: recipient.name,
-          representative: recipient.representative,
-          address: recipient.address
+      const edgeConfigData = {
+        key: contractId,           // Key für Edge Config
+        value: {                   // Value für Edge Config
+          id: contractId,
+          createdAt: new Date().toISOString(),
+          status: 'pending',
+          pdfUrl: blobData.url,
+          initiator,
+          recipient
         }
       };
 
-      // 3. Contract speichern
+      console.log('3. Sending to Edge Config:', edgeConfigData);
+
+      // 3. Contract in Edge Config speichern
       const contractResponse = await fetch('/api/edge-config', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(contractData)
+        body: JSON.stringify(edgeConfigData)  // Jetzt im key-value Format
       });
 
       if (!contractResponse.ok) {
         const error = await contractResponse.json();
-        throw new Error(error.error || 'Failed to save contract data');
+        throw new Error(error.details || 'Failed to save contract data');
       }
 
-      console.log('3. Contract data saved:', contractId);
+      console.log('4. Contract saved successfully');
       setUploadedContractId(contractId);
       setShowSuccess(true);
-
-      // 4. Zur Signature Seite weiterleiten
       router.push(`/signature/${contractId}`);
 
     } catch (error) {
