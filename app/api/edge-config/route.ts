@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { put } from '@vercel/edge-config';
 
 // Pfad zur JSON-Datei
 const dataFile = path.join(process.cwd(), 'data', 'contracts.json');
@@ -54,43 +55,31 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request): Promise<Response> {
+export async function POST(request: Request) {
   try {
-    const contractData = await request.json();
-    
-    if (!contractData.id) {
-      return NextResponse.json(
-        { error: 'Contract ID is required' },
-        { status: 400 }
-      );
+    const data = await request.json();
+    console.log('Attempting to save contract data:', data);
+
+    // Wenn es ein Contract ist, speichern wir es unter einem spezifischen Key
+    if (data.contract) {
+      await put('contracts', data.contract);
+      return NextResponse.json({ success: true });
     }
 
-    console.log('Saving contract:', contractData);
-
-    // Aktuelle Contracts laden und sicherstellen, dass es ein Array ist
-    let contracts = await getContracts();
-    if (!Array.isArray(contracts)) {
-      contracts = [];
+    // Für Test-Zwecke und andere Daten
+    if (data.key && data.value) {
+      await put(data.key, data.value);
+      return NextResponse.json({ success: true });
     }
-    
-    // Neuen Contract hinzufügen
-    contracts.push(contractData);
 
-    // Alle Contracts speichern
-    await saveContracts(contracts);
-    
-    console.log('Contract saved successfully:', contractData.id);
-
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Contract saved',
-      contractId: contractData.id 
-    });
+    throw new Error('Invalid data format');
   } catch (error) {
-    console.error('Save Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to save contract', details: error.message },
-      { status: 500 }
-    );
+    console.error('Edge Config error:', error);
+    // Detailliertere Fehlerinformationen
+    return NextResponse.json({
+      error: 'Failed to save contract',
+      details: error.message,
+      data: error.stack
+    }, { status: 500 });
   }
 } 
