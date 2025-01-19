@@ -58,28 +58,56 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const data = await request.json();
-    console.log('Attempting to save contract data:', data);
+    
+    // Debug Logging
+    console.log('Received data:', JSON.stringify(data, null, 2));
+    console.log('Edge Config Token exists:', !!process.env.EDGE_CONFIG);
 
-    // Wenn es ein Contract ist, speichern wir es unter einem spezifischen Key
+    // Sicherstellen dass wir gültige Daten haben
+    if (!data) {
+      throw new Error('No data received');
+    }
+
+    // Contract speichern
     if (data.contract) {
-      await put('contracts', data.contract);
-      return NextResponse.json({ success: true });
+      console.log('Saving contract:', data.contract.id);
+      const contracts = await getContracts();
+      contracts.push(data.contract);
+      await saveContracts(contracts);
+      return NextResponse.json({ 
+        success: true,
+        message: 'Contract saved successfully'
+      });
     }
 
-    // Für Test-Zwecke und andere Daten
+    // Test-Daten speichern
     if (data.key && data.value) {
+      console.log('Saving test data:', data.key);
       await put(data.key, data.value);
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ 
+        success: true,
+        message: 'Test data saved successfully'
+      });
     }
 
-    throw new Error('Invalid data format');
-  } catch (error) {
-    console.error('Edge Config error:', error);
-    // Detailliertere Fehlerinformationen
+    throw new Error('Invalid data structure');
+
+  } catch (error: any) {
+    console.error('Edge Config error details:', {
+      message: error.message,
+      stack: error.stack,
+      data: error.data
+    });
+
     return NextResponse.json({
       error: 'Failed to save contract',
       details: error.message,
-      data: error.stack
-    }, { status: 500 });
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    }, { 
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
   }
 } 
