@@ -26,7 +26,8 @@ async function saveContracts(contracts: any[]) {
   await fs.writeFile(dataFile, JSON.stringify(contracts, null, 2));
 }
 
-export const maxDuration = 30; // Erhöhe Timeout auf 30 Sekunden
+// Erhöhe den Timeout auf das Maximum
+export const maxDuration = 60; // Maximum für Hobby/Pro Plan
 
 export async function GET(request: Request) {
   try {
@@ -70,15 +71,7 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // Speichern mit Timeout
-    const savePromise = Promise.race([
-      kv.set(data.key, data.value),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('KV Storage timeout')), 8000)
-      )
-    ]);
-
-    await savePromise;
+    await kv.set(data.key, data.value);
     console.log('Data saved successfully');
 
     // Separate Operation für die Liste
@@ -99,17 +92,12 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('KV Storage error:', {
-      message: error.message,
-      stack: error.stack
-    });
-
-    // Sicherstellen dass die Fehlermeldung valides JSON ist
+    console.error('KV Storage error:', error);
     return NextResponse.json({
       error: 'Failed to save contract',
-      details: error.message || 'Unknown error'
+      details: error.message
     }, { 
-      status: error.message?.includes('timeout') ? 504 : 500 
+      status: 500 
     });
   }
 } 
