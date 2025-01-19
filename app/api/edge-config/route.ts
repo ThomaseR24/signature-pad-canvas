@@ -26,6 +26,8 @@ async function saveContracts(contracts: any[]) {
   await fs.writeFile(dataFile, JSON.stringify(contracts, null, 2));
 }
 
+export const maxDuration = 30; // Erhöhe Timeout auf 30 Sekunden
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -58,21 +60,36 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const data = await request.json();
-    console.log('Received data:', JSON.stringify(data, null, 2));
+    console.log('Starting KV storage operation');
 
     // Validierung
     if (!data.key || !data.value) {
-      throw new Error('Missing key or value in request data');
+      return NextResponse.json({
+        error: 'Invalid data',
+        details: 'Missing key or value'
+      }, { status: 400 });
     }
 
-    // Mit KV speichern
-    await kv.set(data.key, data.value);
-    
-    // Optional: Liste aller Contracts aktualisieren
-    const contractsList = await kv.get<string[]>('contracts_list') || [];
-    if (!contractsList.includes(data.key)) {
-      contractsList.push(data.key);
-      await kv.set('contracts_list', contractsList);
+    // Speichern mit Timeout
+    const savePromise = Promise.race([
+      kv.set(data.key, data.value),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('KV Storage timeout')), 8000)
+      )
+    ]);
+
+    await savePromise;
+    console.log('Data saved successfully');
+
+    // Separate Operation für die Liste
+    try {
+      const contractsList = await kv.get<string[]>('contracts_list') || [];
+      if (!contractsList.includes(data.key)) {
+        await kv.set('contracts_list', [...contractsList, data.key]);
+      }
+    } catch (listError) {
+      // Fehler bei der Liste loggen aber nicht den Hauptprozess stoppen
+      console.warn('Could not update contracts list:', listError);
     }
 
     return NextResponse.json({ 
@@ -87,11 +104,12 @@ export async function POST(request: Request) {
       stack: error.stack
     });
 
+    // Sicherstellen dass die Fehlermeldung valides JSON ist
     return NextResponse.json({
       error: 'Failed to save contract',
-      details: error.message
+      details: error.message || 'Unknown error'
     }, { 
-      status: 500 
+      status: error.message?.includes('timeout') ? 504 : 500 
     });
   }
 } 
