@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { put } from '@vercel/edge-config';
+import { put, get } from '@vercel/edge-config';
 
 // Pfad zur JSON-Datei
 const dataFile = path.join(process.cwd(), 'data', 'contracts.json');
@@ -64,33 +64,34 @@ export async function POST(request: Request) {
     console.log('Edge Config Token exists:', !!process.env.EDGE_CONFIG);
 
     // Sicherstellen dass wir gültige Daten haben
-    if (!data) {
-      throw new Error('No data received');
+    if (!data || !data.id) {
+      throw new Error('Invalid contract data');
     }
 
-    // Contract speichern
-    if (data.contract) {
-      console.log('Saving contract:', data.contract.id);
-      const contracts = await getContracts();
-      contracts.push(data.contract);
-      await saveContracts(contracts);
+    // Contract direkt speichern
+    try {
+      // Bestehende Contracts holen
+      const existingContracts = await get('contracts') || [];
+      
+      // Neuen Contract hinzufügen
+      const updatedContracts = [...existingContracts, {
+        contract: data,
+        timestamp: new Date().toISOString()
+      }];
+
+      // Speichern
+      await put('contracts', updatedContracts);
+
       return NextResponse.json({ 
         success: true,
-        message: 'Contract saved successfully'
+        message: 'Contract saved successfully',
+        contractId: data.id
       });
-    }
 
-    // Test-Daten speichern
-    if (data.key && data.value) {
-      console.log('Saving test data:', data.key);
-      await put(data.key, data.value);
-      return NextResponse.json({ 
-        success: true,
-        message: 'Test data saved successfully'
-      });
+    } catch (storageError) {
+      console.error('Storage error:', storageError);
+      throw new Error(`Storage error: ${storageError.message}`);
     }
-
-    throw new Error('Invalid data structure');
 
   } catch (error: any) {
     console.error('Edge Config error details:', {
