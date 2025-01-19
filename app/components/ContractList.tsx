@@ -2,16 +2,18 @@
 
 import { Contract } from '../types/contract';
 import Link from 'next/link';
-import { deleteContract } from '../actions/deleteContract';
 import { useState } from 'react';
-import DeleteModal from './DeleteModal';
+import { useRouter } from 'next/navigation';
+import DeleteConfirmationOverlay from './DeleteConfirmationOverlay';
 
 interface ContractListProps {
   contracts: Contract[];
 }
 
 export default function ContractList({ contracts }: ContractListProps) {
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const router = useRouter();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [contractToDelete, setContractToDelete] = useState<string | null>(null);
 
   const formatDate = (dateString: string) => {
@@ -26,13 +28,29 @@ export default function ContractList({ contracts }: ContractListProps) {
 
   const handleDeleteClick = (contractId: string) => {
     setContractToDelete(contractId);
-    setDeleteModalOpen(true);
+    setShowDeleteConfirm(true);
   };
 
-  const handleDeleteConfirm = async () => {
-    if (contractToDelete) {
-      await deleteContract(contractToDelete);
-      setDeleteModalOpen(false);
+  const handleDelete = async () => {
+    if (!contractToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/contracts/${contractToDelete}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Fehler beim Löschen');
+      }
+
+      setShowDeleteConfirm(false);
+      router.refresh();
+    } catch (error) {
+      console.error('Error deleting contract:', error);
+      alert('Fehler beim Löschen des Vertrags');
+    } finally {
+      setIsDeleting(false);
       setContractToDelete(null);
     }
   };
@@ -86,7 +104,8 @@ export default function ContractList({ contracts }: ContractListProps) {
                   </Link>
                   <button
                     onClick={() => handleDeleteClick(contract.id)}
-                    className="text-red-600 hover:text-red-800"
+                    disabled={isDeleting}
+                    className="text-red-600 hover:text-red-800 disabled:opacity-50"
                   >
                     Löschen
                   </button>
@@ -97,14 +116,16 @@ export default function ContractList({ contracts }: ContractListProps) {
         </div>
       </div>
 
-      <DeleteModal
-        isOpen={deleteModalOpen}
-        onClose={() => {
-          setDeleteModalOpen(false);
-          setContractToDelete(null);
-        }}
-        onConfirm={handleDeleteConfirm}
-      />
+      {/* Delete Confirmation Overlay */}
+      {showDeleteConfirm && (
+        <DeleteConfirmationOverlay
+          onConfirm={handleDelete}
+          onCancel={() => {
+            setShowDeleteConfirm(false);
+            setContractToDelete(null);
+          }}
+        />
+      )}
     </>
   );
 } 

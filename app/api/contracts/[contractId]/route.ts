@@ -2,6 +2,12 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { NextRequest, NextResponse } from 'next/server';
 import { Contract } from '@/app/types/contract';
+import { Redis } from '@upstash/redis';
+
+const redis = new Redis({
+  url: process.env.UPSTASH_KV_REST_API_URL!,
+  token: process.env.UPSTASH_KV_REST_API_TOKEN!
+});
 
 export async function GET(
   request: NextRequest,
@@ -28,6 +34,29 @@ export async function GET(
     console.error('Error loading contract:', error);
     return NextResponse.json(
       { error: 'Internal Server Error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { contractId: string } }
+) {
+  try {
+    // Contract aus Redis löschen
+    await redis.del(params.contractId);
+    
+    // Contract-ID aus der contracts_list entfernen
+    const contractsList = await redis.get<string[]>('contracts_list') || [];
+    const updatedList = contractsList.filter(id => id !== params.contractId);
+    await redis.set('contracts_list', updatedList);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting contract:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete contract' },
       { status: 500 }
     );
   }
