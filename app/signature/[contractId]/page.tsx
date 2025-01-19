@@ -10,7 +10,6 @@ async function getContract(contractId: string): Promise<Contract | null> {
     const contracts = JSON.parse(data);
     
     console.log('Looking for contract:', contractId);
-    // Suche nach 'id' statt 'contractId'
     const contract = contracts.find((c: Contract) => c.id === contractId);
     
     if (!contract) {
@@ -25,14 +24,12 @@ async function getContract(contractId: string): Promise<Contract | null> {
   }
 }
 
-interface PageProps {
-  params: Promise<{ contractId: string }>;
-}
-
-export default async function SignaturePage({ params }: PageProps) {
-  // Warten auf params
-  const resolvedParams = await params;
-  const contractId = resolvedParams.contractId;
+export default async function SignaturePage({ 
+  params 
+}: { 
+  params: Promise<{ contractId: string }> 
+}) {
+  const { contractId } = await params;
   
   console.log('Loading contract:', contractId);
   const contract = await getContract(contractId);

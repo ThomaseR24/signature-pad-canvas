@@ -3,7 +3,7 @@ import path from 'path';
 import { Contract } from '@/app/types/contract';
 import Image from 'next/image';
 import Link from 'next/link';
-import SignatureClient from './SignatureClient';
+import SignatureClient from '@/app/signature/[contractId]/SignatureClient';
 
 async function getContract(contractId: string): Promise<Contract | null> {
   try {
