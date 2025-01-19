@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { put, get } from '@vercel/edge-config';
+import { kv } from '@vercel/kv';
 
 // Pfad zur JSON-Datei
 const dataFile = path.join(process.cwd(), 'data', 'contracts.json');
@@ -60,17 +60,29 @@ export async function POST(request: Request) {
     const data = await request.json();
     console.log('Received data:', JSON.stringify(data, null, 2));
 
-    // Format wie beim Test-Button
-    await put('currentContract', data);
+    // Validierung
+    if (!data.key || !data.value) {
+      throw new Error('Missing key or value in request data');
+    }
+
+    // Mit KV speichern
+    await kv.set(data.key, data.value);
+    
+    // Optional: Liste aller Contracts aktualisieren
+    const contractsList = await kv.get<string[]>('contracts_list') || [];
+    if (!contractsList.includes(data.key)) {
+      contractsList.push(data.key);
+      await kv.set('contracts_list', contractsList);
+    }
 
     return NextResponse.json({ 
       success: true,
       message: 'Contract saved successfully',
-      contractId: data.id
+      key: data.key
     });
 
   } catch (error: any) {
-    console.error('Edge Config error:', {
+    console.error('KV Storage error:', {
       message: error.message,
       stack: error.stack
     });
