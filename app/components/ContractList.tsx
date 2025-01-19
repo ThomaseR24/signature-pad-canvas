@@ -1,12 +1,16 @@
 'use client';
 
-import { Contract } from '@/app/types/contract';
+import { Contract } from '../types/contract';
 import Link from 'next/link';
 import { deleteContract } from '../actions/deleteContract';
 import { useState } from 'react';
 import DeleteModal from './DeleteModal';
 
-export default function ContractList({ contracts }: { contracts: Contract[] }) {
+interface ContractListProps {
+  contracts: Contract[];
+}
+
+export default function ContractList({ contracts }: ContractListProps) {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [contractToDelete, setContractToDelete] = useState<string | null>(null);
 
@@ -35,49 +39,62 @@ export default function ContractList({ contracts }: { contracts: Contract[] }) {
 
   return (
     <>
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-600">Vertrag ID</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-600">Initiator</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-600">Partner</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-600">Status</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-600">Datum</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-600">Aktion</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {contracts.map((contract) => (
-              <tr key={contract.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 text-sm text-gray-900">{contract.id}</td>
-                <td className="px-6 py-4 text-sm text-gray-900">{contract.initiator.name}</td>
-                <td className="px-6 py-4 text-sm text-gray-900">{contract.recipient.name}</td>
-                <td className="px-6 py-4 text-sm">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                    ${contract.status === 'Signiert' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                    {contract.status}
+      <div className="bg-white rounded-lg shadow">
+        <div className="grid grid-cols-6 gap-4 p-4 bg-gray-50 rounded-t-lg">
+          <div>Vertrag ID</div>
+          <div>Initiator</div>
+          <div>Partner</div>
+          <div>Status</div>
+          <div>Datum</div>
+          <div>Aktion</div>
+        </div>
+
+        <div className="divide-y">
+          {contracts.map((contract) => {
+            const isCompleted = contract.initiatorSignature && contract.recipientSignature;
+            const status = isCompleted ? 'completed' : 'pending';
+            
+            return (
+              <div key={contract.id} className="grid grid-cols-6 gap-4 p-4">
+                <div className="text-gray-900">{contract.id}</div>
+                <div>{contract.initiator.name}</div>
+                <div>{contract.recipient.name}</div>
+                <div>
+                  <span className={`px-2 py-1 rounded-full text-sm ${
+                    status === 'completed' 
+                      ? 'bg-yellow-100 text-yellow-800' 
+                      : 'bg-yellow-50 text-yellow-600'
+                  }`}>
+                    {status}
                   </span>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-900">{formatDate(contract.createdAt)}</td>
-                <td className="px-6 py-4 text-sm space-x-2">
+                </div>
+                <div className="text-gray-600">
+                  {new Date(contract.createdAt).toLocaleString('de-DE', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+                <div className="space-x-4">
                   <Link
-                    href={`/contract/${contract.id}`}
-                    className="text-blue-600 hover:text-blue-900"
+                    href={isCompleted ? `/contract/${contract.id}` : `/signature/${contract.id}`}
+                    className="text-blue-600 hover:text-blue-800"
                   >
-                    Anzeigen
+                    {isCompleted ? 'Anzeigen' : 'Signieren'}
                   </Link>
                   <button
                     onClick={() => handleDeleteClick(contract.id)}
-                    className="text-red-600 hover:text-red-900 ml-2"
+                    className="text-red-600 hover:text-red-800"
                   >
                     Löschen
                   </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <DeleteModal
