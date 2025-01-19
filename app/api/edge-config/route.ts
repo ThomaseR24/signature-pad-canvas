@@ -58,57 +58,28 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const data = await request.json();
-    
-    // Debug Logging
     console.log('Received data:', JSON.stringify(data, null, 2));
-    console.log('Edge Config Token exists:', !!process.env.EDGE_CONFIG);
 
-    // Sicherstellen dass wir gültige Daten haben
-    if (!data || !data.id) {
-      throw new Error('Invalid contract data');
-    }
+    // Format wie beim Test-Button
+    await put('currentContract', data);
 
-    // Contract direkt speichern
-    try {
-      // Bestehende Contracts holen
-      const existingContracts = await get('contracts') || [];
-      
-      // Neuen Contract hinzufügen
-      const updatedContracts = [...existingContracts, {
-        contract: data,
-        timestamp: new Date().toISOString()
-      }];
-
-      // Speichern
-      await put('contracts', updatedContracts);
-
-      return NextResponse.json({ 
-        success: true,
-        message: 'Contract saved successfully',
-        contractId: data.id
-      });
-
-    } catch (storageError) {
-      console.error('Storage error:', storageError);
-      throw new Error(`Storage error: ${storageError.message}`);
-    }
+    return NextResponse.json({ 
+      success: true,
+      message: 'Contract saved successfully',
+      contractId: data.id
+    });
 
   } catch (error: any) {
-    console.error('Edge Config error details:', {
+    console.error('Edge Config error:', {
       message: error.message,
-      stack: error.stack,
-      data: error.data
+      stack: error.stack
     });
 
     return NextResponse.json({
       error: 'Failed to save contract',
-      details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      details: error.message
     }, { 
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      status: 500 
     });
   }
 } 
