@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { kv } from '@vercel/kv';
+import { Redis } from '@upstash/redis'
 
 // Pfad zur JSON-Datei
 const dataFile = path.join(process.cwd(), 'data', 'contracts.json');
@@ -25,6 +26,12 @@ async function saveContracts(contracts: any[]) {
   await fs.mkdir(path.join(process.cwd(), 'data'), { recursive: true });
   await fs.writeFile(dataFile, JSON.stringify(contracts, null, 2));
 }
+
+// Upstash Redis Client initialisieren
+const redis = new Redis({
+  url: process.env.UPSTASH_URL!,
+  token: process.env.UPSTASH_REST_TOKEN!,
+})
 
 // Erhöhe den Timeout auf das Maximum
 export const maxDuration = 60; // Maximum für Hobby/Pro Plan
@@ -61,9 +68,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const data = await request.json();
-    console.log('Starting KV storage operation');
+    console.log('Starting Redis storage operation');
 
-    // Validierung
     if (!data.key || !data.value) {
       return NextResponse.json({
         error: 'Invalid data',
@@ -71,19 +77,9 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    await kv.set(data.key, data.value);
+    // Redis statt KV verwenden
+    await redis.set(data.key, data.value);
     console.log('Data saved successfully');
-
-    // Separate Operation für die Liste
-    try {
-      const contractsList = await kv.get<string[]>('contracts_list') || [];
-      if (!contractsList.includes(data.key)) {
-        await kv.set('contracts_list', [...contractsList, data.key]);
-      }
-    } catch (listError) {
-      // Fehler bei der Liste loggen aber nicht den Hauptprozess stoppen
-      console.warn('Could not update contracts list:', listError);
-    }
 
     return NextResponse.json({ 
       success: true,
@@ -92,7 +88,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('KV Storage error:', error);
+    console.error('Redis Storage error:', error);
     return NextResponse.json({
       error: 'Failed to save contract',
       details: error.message
