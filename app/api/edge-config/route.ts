@@ -27,8 +27,11 @@ async function saveContracts(contracts: any[]) {
   await fs.writeFile(dataFile, JSON.stringify(contracts, null, 2));
 }
 
-// Redis Client korrekt initialisieren
-const redis = Redis.fromEnv()
+// Upstash Redis Client mit expliziten Umgebungsvariablen
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!
+})
 
 // Erhöhe den Timeout auf das Maximum
 export const maxDuration = 60; // Maximum für Hobby/Pro Plan
@@ -65,7 +68,10 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const data = await request.json();
-    console.log('Starting Redis storage operation');
+    console.log('Starting Redis storage operation', {
+      hasUrl: !!process.env.UPSTASH_REDIS_REST_URL,
+      hasToken: !!process.env.UPSTASH_REDIS_REST_TOKEN
+    });
 
     if (!data.key || !data.value) {
       return NextResponse.json({
@@ -74,7 +80,6 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // Redis Operation
     await redis.set(data.key, data.value);
     console.log('Data saved successfully');
 
@@ -85,7 +90,14 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('Redis Storage error:', error);
+    console.error('Redis Storage error:', {
+      message: error.message,
+      env: {
+        hasUrl: !!process.env.UPSTASH_REDIS_REST_URL,
+        hasToken: !!process.env.UPSTASH_REDIS_REST_TOKEN
+      }
+    });
+
     return NextResponse.json({
       error: 'Failed to save contract',
       details: error.message
