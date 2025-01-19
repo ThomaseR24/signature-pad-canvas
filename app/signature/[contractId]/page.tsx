@@ -1,44 +1,43 @@
-import { promises as fs } from 'fs';
-import path from 'path';
-import SignatureClient from './SignatureClient';
+import { Redis } from '@upstash/redis';
 import { Contract } from '@/app/types/contract';
+import { notFound } from 'next/navigation';
+import SignatureClient from './SignatureClient';
+
+const redis = new Redis({
+  url: process.env.UPSTASH_KV_REST_API_URL!,
+  token: process.env.UPSTASH_KV_REST_API_TOKEN!
+});
 
 async function getContract(contractId: string): Promise<Contract | null> {
   try {
-    const contractsPath = path.join(process.cwd(), 'data/contracts.json');
-    const data = await fs.readFile(contractsPath, 'utf8');
-    const contracts = JSON.parse(data);
+    console.log('Loading contract:', contractId);
+    const contractData = await redis.get<Contract>(contractId);
     
-    console.log('Looking for contract:', contractId);
-    const contract = contracts.find((c: Contract) => c.id === contractId);
-    
-    if (!contract) {
+    if (!contractData) {
       console.log('No contract found with id:', contractId);
       return null;
     }
-    
-    return contract;
+
+    console.log('Contract found:', contractData);
+    return contractData;
   } catch (error) {
     console.error('Error loading contract:', error);
     return null;
   }
 }
 
-export default async function SignaturePage({ 
-  params 
-}: { 
-  params: Promise<{ contractId: string }> 
+export default async function SignaturePage({
+  params: { contractId },
+}: {
+  params: { contractId: string };
 }) {
-  const { contractId } = await params;
-  
-  console.log('Loading contract:', contractId);
   const contract = await getContract(contractId);
 
   if (!contract) {
     return (
-      <div className="min-h-screen bg-background p-8">
-        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6">
-          <h1 className="text-2xl font-bold text-center mb-8">
+      <div className="min-h-screen p-8">
+        <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
+          <h1 className="text-2xl font-bold text-center mb-4">
             Vertrag nicht gefunden
           </h1>
           <p className="text-center text-gray-600">

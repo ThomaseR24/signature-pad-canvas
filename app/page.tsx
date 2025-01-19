@@ -1,29 +1,54 @@
-import { promises as fs } from 'fs';
-import path from 'path';
-import ContractList from './components/ContractList';
+import { Redis } from '@upstash/redis';
 import { Contract } from './types/contract';
 import Link from 'next/link';
+import ContractList from './components/ContractList';
+
+// Redis Client initialisieren
+const redis = new Redis({
+  url: process.env.UPSTASH_KV_REST_API_URL!,
+  token: process.env.UPSTASH_KV_REST_API_TOKEN!
+});
 
 async function getContracts(): Promise<Contract[]> {
   try {
-    const contractsPath = path.join(process.cwd(), 'data', 'contracts.json');
-    const data = await fs.readFile(contractsPath, 'utf8');
-    
-    // Debug Ausgaben
-    console.log('Reading contracts from:', contractsPath);
-    const contracts = JSON.parse(data);
-    console.log('Loaded contracts:', contracts);
-    
-    // Prüfen ob es ein Array ist oder in einem Objekt verschachtelt ist
-    if (Array.isArray(contracts)) {
-      return contracts;
-    } else if (contracts.contracts && Array.isArray(contracts.contracts)) {
-      return contracts.contracts;
+    console.log('Redis Config:', {
+      hasUrl: !!process.env.UPSTASH_KV_REST_API_URL,
+      hasToken: !!process.env.UPSTASH_KV_REST_API_TOKEN
+    });
+
+    // Hole alle Contract IDs aus der contracts_list
+    const contractsList = await redis.get<string[]>('contracts_list') || [];
+    console.log('Raw contracts_list:', contractsList);
+
+    if (!contractsList.length) {
+      console.log('No contracts found in list');
+      return [];
     }
+
+    // Hole die Daten für jeden Contract
+    const contracts = await Promise.all(
+      contractsList.map(async (contractId) => {
+        console.log('Fetching contract:', contractId);
+        const contract = await redis.get<Contract>(contractId);
+        console.log('Contract data:', contract);
+        return contract;
+      })
+    );
+
+    const filteredContracts = contracts.filter((contract): contract is Contract => 
+      contract !== null && contract !== undefined
+    );
     
-    return [];
+    console.log('Final contracts:', filteredContracts);
+    return filteredContracts;
+
   } catch (error) {
-    console.error('Error loading contracts:', error);
+    console.error('Error loading contracts from Redis:', error);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
     return [];
   }
 }

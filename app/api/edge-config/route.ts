@@ -68,36 +68,34 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const data = await request.json();
-    console.log('Starting Redis storage operation', {
-      hasUrl: !!process.env.UPSTASH_KV_REST_API_URL,
-      hasToken: !!process.env.UPSTASH_KV_REST_API_TOKEN
-    });
+    console.log('Received data:', { key: data.key, value: data.value });
 
-    if (!data.key || !data.value) {
-      return NextResponse.json({
-        error: 'Invalid data',
-        details: 'Missing key or value'
-      }, { status: 400 });
+    // Contract speichern
+    await redis.set(data.key, JSON.stringify(data.value));
+    console.log('Contract saved:', data.key);
+
+    // Contract ID zur Liste hinzufügen
+    let contractsList = await redis.get<string[]>('contracts_list');
+    if (!Array.isArray(contractsList)) {
+      contractsList = [];
     }
+    console.log('Current contracts list:', contractsList);
 
-    await redis.set(data.key, data.value);
-    console.log('Data saved successfully');
+    if (!contractsList.includes(data.key)) {
+      contractsList.push(data.key);
+      await redis.set('contracts_list', contractsList);
+      console.log('Updated contracts list:', contractsList);
+    }
 
     return NextResponse.json({ 
       success: true,
       message: 'Contract saved successfully',
-      key: data.key
+      key: data.key,
+      listLength: contractsList.length
     });
 
   } catch (error: any) {
-    console.error('Redis Storage error:', {
-      message: error.message,
-      env: {
-        hasUrl: !!process.env.UPSTASH_KV_REST_API_URL,
-        hasToken: !!process.env.UPSTASH_KV_REST_API_TOKEN
-      }
-    });
-
+    console.error('Redis Storage error:', error);
     return NextResponse.json({
       error: 'Failed to save contract',
       details: error.message

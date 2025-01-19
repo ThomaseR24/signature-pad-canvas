@@ -1,64 +1,43 @@
+import { Redis } from '@upstash/redis';
+import { NextRequest, NextResponse } from 'next/server';
 import { Contract } from '@/app/types/contract';
-import { promises as fs } from 'fs';
-import { NextResponse } from 'next/server';
-import path from 'path';
 
-interface SignatureRequest {
-  contractId: string;
-  party: 'initiator' | 'recipient';
-  timestamp: string;
-  signatureImage: string;
-  name: string;
-  pdfHash: string;
-}
+const redis = new Redis({
+  url: process.env.UPSTASH_KV_REST_API_URL!,
+  token: process.env.UPSTASH_KV_REST_API_TOKEN!
+});
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const signatureData: SignatureRequest = await request.json();
+    const { contractId, party, signature, signatureImage, timestamp } = await request.json();
     
-    // Lade aktuelle Verträge
-    const contractsPath = path.join(process.cwd(), 'data', 'contracts.json');
-    const contractsData = await fs.readFile(contractsPath, 'utf8');
-    const contracts = JSON.parse(contractsData);
-    
-    // Finde den richtigen Vertrag
-    const contract = contracts.find(
-      (c: Contract) => c.id === signatureData.contractId
-    );
-    
+    const contract = await redis.get<Contract>(contractId);
     if (!contract) {
-      console.error('Contract not found:', signatureData.contractId);
-      return NextResponse.json({ error: 'Vertrag nicht gefunden' }, { status: 404 });
+      return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
     }
 
-    // Hash speichern
-    contract.hash = signatureData.pdfHash;
-
-    // Aktualisiere die entsprechende Partei
-    const party = signatureData.party;
+    // Update contract with signature
     if (party === 'initiator') {
-      contract.initiator.signature = {
-        image: signatureData.signatureImage,
-        timestamp: signatureData.timestamp,
-        name: signatureData.name
-      };
+      contract.initiatorSignature = signature;
+      contract.initiatorSignatureImage = signatureImage;
+      contract.initiatorSignedAt = timestamp;
     } else {
-      contract.recipient.signature = {
-        image: signatureData.signatureImage,
-        timestamp: signatureData.timestamp,
-        name: signatureData.name
-      };
+      contract.recipientSignature = signature;
+      contract.recipientSignatureImage = signatureImage;
+      contract.recipientSignedAt = timestamp;
     }
 
-    // Speichere die aktualisierten Daten
-    await fs.writeFile(contractsPath, JSON.stringify(contracts, null, 2));
-    console.log('Saved contract data with hash to file');
+    await redis.set(contractId, contract);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      message: 'Signature saved successfully'
+    });
+
   } catch (error) {
-    console.error('Error processing signature:', error);
+    console.error('Error saving signature:', error);
     return NextResponse.json(
-      { error: 'Fehler beim Verarbeiten der Signatur' },
+      { error: 'Failed to save signature' },
       { status: 500 }
     );
   }

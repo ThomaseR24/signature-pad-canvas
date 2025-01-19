@@ -32,9 +32,8 @@ export interface DocumentDetails {
 export interface Contract {
   id: string;
   createdAt: string;
-  status: 'pending' | 'signed';
+  status: string;
   pdfUrl: string;
-  hash?: string;
   initiator: {
     name: string;
     representative: {
@@ -47,12 +46,6 @@ export interface Contract {
       city: string;
       zipCode: string;
       country: string;
-    };
-    role?: 'disclosing_party' | 'receiving_party';
-    signature?: {
-      image: string;
-      timestamp: string;
-      name: string;
     };
   };
   recipient: {
@@ -68,10 +61,11 @@ export interface Contract {
       zipCode: string;
       country: string;
     };
-    signature?: {
-      image: string;
-      timestamp: string;
-      name: string;
-    };
   };
+  initiatorSignature?: string;
+  initiatorSignatureImage?: string;
+  initiatorSignedAt?: string;
+  recipientSignature?: string;
+  recipientSignatureImage?: string;
+  recipientSignedAt?: string;
 } 
