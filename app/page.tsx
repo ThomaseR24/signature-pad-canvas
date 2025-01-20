@@ -53,6 +53,10 @@ async function getContracts(): Promise<Contract[]> {
   }
 }
 
+export const revalidate = 0; // Deaktiviert das Caching
+// oder
+export const dynamic = 'force-dynamic';
+
 export default async function Home() {
   const contracts = await getContracts();
   
