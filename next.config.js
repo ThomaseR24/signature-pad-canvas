@@ -5,10 +5,15 @@ const nextConfig = {
     serverActions: true
   },
 
+  // Cache deaktivieren
+  staticPageGenerationTimeout: 0,
+  generateEtags: false,
+
   // Image Domains
   images: {
     domains: ['qmixewgggqzswion.public.blob.vercel-storage.com'],
-    unoptimized: true
+    unoptimized: true,
+    minimumCacheTTL: 0  // Cache für Bilder deaktivieren
   },
 
   // Build-Zeit-Prüfungen deaktivieren
