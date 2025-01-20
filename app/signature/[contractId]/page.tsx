@@ -3,12 +3,17 @@ import { Contract } from '@/app/types/contract';
 import { notFound } from 'next/navigation';
 import SignatureClient from './SignatureClient';
 
-const redis = new Redis({
-  url: process.env.UPSTASH_KV_REST_API_URL!,
-  token: process.env.UPSTASH_KV_REST_API_TOKEN!
-});
+export const revalidate = 0; // Deaktiviert das Caching
+
+// oder alternativ
+export const dynamic = 'force-dynamic';
 
 async function getContract(contractId: string): Promise<Contract | null> {
+  const redis = new Redis({
+    url: process.env.UPSTASH_KV_REST_API_URL!,
+    token: process.env.UPSTASH_KV_REST_API_TOKEN!
+  });
+
   try {
     console.log('Loading contract:', contractId);
     const contractData = await redis.get<Contract>(contractId);

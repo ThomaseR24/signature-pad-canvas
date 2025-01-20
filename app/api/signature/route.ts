@@ -29,10 +29,15 @@ export async function POST(request: NextRequest) {
 
     await redis.set(contractId, contract);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: 'Signature saved successfully'
     });
+    
+    // Cache-Control Header setzen
+    response.headers.set('Cache-Control', 'no-store');
+    
+    return response;
 
   } catch (error) {
     console.error('Error saving signature:', error);
